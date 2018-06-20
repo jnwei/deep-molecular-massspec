@@ -76,7 +76,11 @@ def parse_peaks(pk_str):
 
 def get_largest_mass_spec_peak_loc(mol):
   """Returns largest ms peak location from an rdkit.Mol object."""
-  return parse_peaks(mol.GetProp(ms_constants.SDF_TAG_MASS_SPEC_PEAKS))[0][-1]
+  try:
+    largest_peak = parse_peaks(mol.GetProp(ms_constants.SDF_TAG_MASS_SPEC_PEAKS))[0][-1]
+  except KeyError:
+    largest_peak = 10e6
+  return largest_peak
 
 
 def make_dense_mass_spectra(peak_locs, peak_intensities, max_peak_loc):
@@ -237,6 +241,11 @@ def all_circular_fingerprints_to_dict(mol):
 def check_mol_has_non_empty_smiles(mol):
   """Checks if smiles string of rdkit.Mol is an empty string."""
   return bool(get_smiles_string(mol))
+
+
+def check_mol_has_non_empty_sdf_tags(mol):
+  """Checks if property dictionary of rdkit.Mol is empty."""
+  return bool(mol.GetPropsAsDict().keys())
 
 
 def check_mol_only_has_atoms(mol, accept_atom_list):

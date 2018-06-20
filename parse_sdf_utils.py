@@ -115,6 +115,9 @@ def get_sdf_to_mol(
 
   def _mol_passes_filters(mol):
     """A helper function for testing mols on all filtering conditions."""
+    if not feature_utils.check_mol_has_non_empty_sdf_tags(mol):
+        return False
+
     filter_list = []
     filter_list.append(feature_utils.check_mol_has_non_empty_smiles(mol))
 

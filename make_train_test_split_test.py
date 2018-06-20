@@ -126,7 +126,7 @@ class MakeTrainTestSplitTest(tf.test.TestCase, parameterized.TestCase):
     train_test_split_utils.assert_all_lists_mutally_exclusive(
         holdout_inchikey_list_of_lists)
 
-  def test_make_train_val_test_split_mol_lists_family(self):
+  def test_make_train_val_test_split_mol_lists_family_exclusive(self):
     train_test_split = train_test_split_utils.TrainValTestFractions(
         0.5, 0.25, 0.25)
     train_inchikeys, val_inchikeys, test_inchikeys = (
@@ -135,7 +135,8 @@ class MakeTrainTestSplitTest(tf.test.TestCase, parameterized.TestCase):
             self.inchikey_dict_large,
             train_test_split,
             holdout_inchikey_list=self.inchikey_list_small,
-            splitting_type='diazo'))
+            splitting_type='family_exclusive',
+            family_name='diazo'))
 
     self.assertItemsEqual(train_inchikeys, [
         'UFHFLCQGNIYNRP-UHFFFAOYSA-N', 'CCGKOQOJPYTBIH-UHFFFAOYSA-N',
@@ -153,17 +154,74 @@ class MakeTrainTestSplitTest(tf.test.TestCase, parameterized.TestCase):
             self.inchikey_list_small,
             self.inchikey_dict_small,
             train_test_split,
-            splitting_type='diazo'))
+            splitting_type='family_exclusive',
+            family_name='diazo'))
 
     self.assertEqual(replicate_train_inchikeys[0],
                      'PNYUDNYAXSEACV-RVDMUPIBSA-N')
     self.assertEqual(replicate_test_inchikeys[0], 'YXHKONLOYHBTNS-UHFFFAOYSA-N')
 
-  @parameterized.parameters('random', 'diazo')
+  def test_make_train_val_test_split_mol_lists_family_split(self):
+    train_test_split = train_test_split_utils.TrainValTestFractions(
+        0.5, 0.25, 0.25)
+    train_inchikeys, val_inchikeys, test_inchikeys = (
+        train_test_split_utils.make_train_val_test_split_inchikey_lists(
+            self.inchikey_list_large,
+            self.inchikey_dict_large,
+            train_test_split,
+            holdout_inchikey_list=self.inchikey_list_small,
+            splitting_type='family_split',
+            family_name='diazo'))
+
+    # Check that training set contains all non-diazo molecules.
+    # self.assertFalse(set([
+    #     'UFHFLCQGNIYNRP-UHFFFAOYSA-N', 'CCGKOQOJPYTBIH-UHFFFAOYSA-N',
+    #     'ASTNYHRQIBTGNO-UHFFFAOYSA-N', 'UFHFLCQGNIYNRP-VVKOMZTBSA-N',
+    #     'PVVBOXUQVSZBMK-UHFFFAOYSA-N'
+    # ]) - set(train_inchikeys))
+
+    self.assertEqual(len(set([
+        'OWKPLCCVKXABQF-UHFFFAOYSA-N', 'COVPJOWITGLAKX-UHFFFAOYSA-N',
+        'GKVDXUXIAHWQIK-UHFFFAOYSA-N', 'UCIXUAPVXAZYDQ-VMPITWQZSA-N'
+    ]).intersection(set(train_inchikeys))), 2)
+
+    self.assertEqual(len(set([
+        'OWKPLCCVKXABQF-UHFFFAOYSA-N', 'COVPJOWITGLAKX-UHFFFAOYSA-N',
+        'GKVDXUXIAHWQIK-UHFFFAOYSA-N', 'UCIXUAPVXAZYDQ-VMPITWQZSA-N'
+    ]).intersection(set(val_inchikeys))), 1)
+
+    self.assertEqual(len(set([
+        'OWKPLCCVKXABQF-UHFFFAOYSA-N', 'COVPJOWITGLAKX-UHFFFAOYSA-N',
+        'GKVDXUXIAHWQIK-UHFFFAOYSA-N', 'UCIXUAPVXAZYDQ-VMPITWQZSA-N'
+    ]).intersection(set(test_inchikeys))), 1)
+
+    self.assertFalse(set([
+        'OWKPLCCVKXABQF-UHFFFAOYSA-N', 'COVPJOWITGLAKX-UHFFFAOYSA-N',
+        'GKVDXUXIAHWQIK-UHFFFAOYSA-N', 'UCIXUAPVXAZYDQ-VMPITWQZSA-N'
+    ]) - set(train_inchikeys + val_inchikeys + test_inchikeys))
+
+    replicate_train_inchikeys, _, replicate_test_inchikeys = (
+        train_test_split_utils.make_train_val_test_split_inchikey_lists(
+            self.inchikey_list_small,
+            self.inchikey_dict_small,
+            train_test_split,
+            splitting_type='family_split',
+            family_name='diazo'))
+
+    # self.assertEqual(replicate_train_inchikeys[0],
+    #                  'PNYUDNYAXSEACV-RVDMUPIBSA-N')
+    self.assertIn('YXHKONLOYHBTNS-UHFFFAOYSA-N', replicate_test_inchikeys)
+
+  @parameterized.parameters('random', 'family_exclusive')
   def test_make_train_test_split(self, splitting_type):
     """An integration test on a small dataset."""
 
     fpath = self.temp_dir
+
+    if splitting_type == 'random':
+      family_name = None
+    else:
+      family_name = 'diazo'
 
     # Create component datasets from two library files.
     main_train_val_test_fractions = (
@@ -175,7 +233,8 @@ class MakeTrainTestSplitTest(tf.test.TestCase, parameterized.TestCase):
      component_inchikey_dict) = (
          make_train_test_split.make_mainlib_replicates_train_test_split(
              self.mol_list_large, self.mol_list_small, splitting_type,
-             main_train_val_test_fractions, replicates_val_test_fractions))
+             family_name, main_train_val_test_fractions,
+             replicates_val_test_fractions))
 
     make_train_test_split.write_mainlib_split_datasets(
         component_inchikey_dict, mainlib_inchikey_dict, fpath,

@@ -87,9 +87,13 @@ flags.DEFINE_list(
     'specify fraction of replicates molecules to use for'
     ' for the three replicates sample files.')
 flags.DEFINE_enum(
-    'splitting_type', 'random', ['random', 'steroid', 'diazo'],
+    'splitting_type', 'random',
+    ['random', 'family_exclusive', 'family_split'],
     'specify splitting method to use for creating '
     'training/validation/test sets')
+flags.DEFINE_enum(
+    'family_name', None, ['steroid', 'diazo'],
+    'specify families to use for specialized splitting.') 
 flags.DEFINE_string('output_master_dir', '/tmp/output_dataset_dir',
                     'specify directory to save records')
 flags.DEFINE_integer('max_atoms', ms_constants.MAX_ATOMS,
@@ -108,6 +112,7 @@ def make_mainlib_replicates_train_test_split(
     mainlib_mol_list,
     replicates_mol_list,
     splitting_type,
+    family_name,
     mainlib_fractions,
     replicates_fractions,
     mainlib_maximum_num_molecules_to_use=None,
@@ -166,15 +171,24 @@ def make_mainlib_replicates_train_test_split(
           main_inchikey_dict,
           mainlib_fractions,
           holdout_inchikey_list=replicates_inchikey_list,
-          splitting_type=splitting_type))
+          splitting_type=splitting_type,
+          family_name=family_name))
 
   # Make train/val/test splits for replicates dataset.
+  # For family_split, we want to have only the family in our test set.
+  # We will therefore use the family_exclusive splitting type.
+  if splitting_type == 'family_split':
+    replicates_splitting_type = 'family_exclusive'
+  else:
+    replicates_splitting_type = splitting_type
+
   replicates_validation_test_inchikeys = (
       train_test_split_utils.make_train_val_test_split_inchikey_lists(
           replicates_inchikey_list,
           replicates_inchikey_dict,
           replicates_fractions,
-          splitting_type=splitting_type))
+          splitting_type=replicates_splitting_type,
+          family_name=family_name))
 
   component_inchikey_dict = {
       ds_constants.MAINLIB_TRAIN_BASENAME:
@@ -421,6 +435,7 @@ def main(_):
           mainlib_mol_list,
           replicates_mol_list,
           FLAGS.splitting_type,
+          FLAGS.family_name,
           main_train_val_test_fractions,
           replicates_train_val_test_fractions,
           mainlib_maximum_num_molecules_to_use=FLAGS.

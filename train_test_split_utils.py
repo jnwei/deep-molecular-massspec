@@ -133,11 +133,50 @@ def get_inchikeys_by_family(inchikey_list,
                                val_test_inchikeys[val_num:])
 
 
+def get_random_inchikeys_by_family(inchikey_list,
+                                   inchikey_dict,
+                                   train_val_test_split_fractions,
+                                   family_name='steroid'):
+  """Split molecules in a family into training/test sets.
+
+  Identifies all inchikeys of a family and places some in train sets, 
+  some in tests sets according to the train_val_test_split_fractions.
+
+  Args:
+    inchikey_list: List of inchikeys to partition into train/val/test sets
+    inchikey_dict: dict of inchikeys, [rdkit.Mol objects].
+        Must contain inchikey_list in its keys.
+    train_val_test_split_fractions: a TrainValTestFractions tuple
+    family_name: str, a key in feature_utils.FAMILY_DICT
+  Returns:
+    TrainValTestInchikeys object
+  """
+  substructure_filter_fn = feature_utils.make_filter_by_substructure(
+      family_name)
+  family_inchikeys = []
+  nonfamily_inchikeys = []
+
+  for ikey in inchikey_list:
+    if substructure_filter_fn(inchikey_dict[ikey][0]):
+      family_inchikeys.append(ikey)
+    else:
+      nonfamily_inchikeys.append(ikey)
+
+  family_train_val_test_inchikeys = get_random_inchikeys(family_inchikeys,
+      train_val_test_split_fractions)
+  nonfamily_train_val_test_inchikeys = get_random_inchikeys(nonfamily_inchikeys,
+      train_val_test_split_fractions)
+
+  return TrainValTestInchikeys(*[family_train_val_test_inchikeys[i] + 
+       nonfamily_train_val_test_inchikeys[i] for i in range(3)])
+
+
 def make_train_val_test_split_inchikey_lists(train_inchikey_list,
                                              train_inchikey_dict,
                                              train_val_test_split_fractions,
                                              holdout_inchikey_list=None,
-                                             splitting_type='random'):
+                                             splitting_type='random',
+                                             family_name = None):
   """Given inchikey lists, returns lists to use for train/val/test sets.
 
   If holdout_inchikey_list is given, the inchikeys in this list will be excluded
@@ -173,14 +212,24 @@ def make_train_val_test_split_inchikey_lists(train_inchikey_list,
     return get_random_inchikeys(train_inchikey_list,
                                 train_val_test_split_fractions)
   else:
-    # Assume that splitting_type is the name of a structure family.
-    # get_inchikeys_by_family will throw an error if this is not supported.
-    return get_inchikeys_by_family(
-        train_inchikey_list,
-        train_inchikey_dict,
-        train_val_test_split_fractions,
-        family_name=splitting_type,
-        exclude_from_train=True)
+    if not family_name:
+      raise ValueError('Must specify family_name for non random splits.')
+
+    if splitting_type == 'family_exclusive':
+      # Assume that splitting_type is the name of a structure family.
+      # get_inchikeys_by_family will throw an error if this is not supported.
+      return get_inchikeys_by_family(
+          train_inchikey_list,
+          train_inchikey_dict,
+          train_val_test_split_fractions,
+          family_name=family_name,
+          exclude_from_train=True)
+    elif splitting_type == 'family_split':
+      return get_random_inchikeys_by_family(
+          train_inchikey_list,
+          train_inchikey_dict,
+          train_val_test_split_fractions,
+          family_name=family_name)
 
 
 def make_mol_list_from_inchikey_dict(inchikey_dict, inchikey_list):
