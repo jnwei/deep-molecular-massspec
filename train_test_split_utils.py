@@ -30,6 +30,7 @@ import feature_utils
 import mass_spec_constants as ms_constants
 import numpy as np
 
+
 # Helper class for storing train, validation, and test fractions.
 TrainValTestFractions = namedtuple('TrainValTestFractions',
                                    ['train', 'validation', 'test'])
@@ -151,8 +152,7 @@ def get_random_inchikeys_by_family(inchikey_list,
   Returns:
     TrainValTestInchikeys object
   """
-  substructure_filter_fn = feature_utils.make_filter_by_substructure(
-      family_name)
+  substructure_filter_fn = feature_utils.FILTER_DICT[family_name]
   family_inchikeys = []
   nonfamily_inchikeys = []
 
@@ -246,3 +246,84 @@ def make_mol_list_from_inchikey_dict(inchikey_dict, inchikey_list):
     mol_list.extend(inchikey_dict[inchikey])
 
   return mol_list
+
+
+def make_mainlib_replicates_split(
+  mainlib_inchikey_dict, replicates_inchikey_dict):
+  """Separate all replicates molecules from mainlib.
+
+  Args:
+    mainlib_mol_dict : dict of molecules from main library 
+        keyed by inchikey 
+    replicates_mol_dict : dict of molecules from replicates library
+        keyed by inchikey
+  Returns:
+    mainlib_inchikeys_all : list inchikeys corresponding to mainlib
+        molecules not in the replicates set.
+    replicates_inchikeys_all : list inchikeys corresponding to
+        molecules in the replicate set.
+  """
+  mainlib_inchikey_list = mainlib_inchikey_dict.keys()
+  replicates_inchikey_list = replicates_inchikey_dict.keys()
+
+  mainlib_inchikey_exclusive = [
+        ikey for ikey in mainlib_inchikey_list
+        if ikey not in replicates_inchikey_list
+    ]
+
+  return mainlib_inchikey_exclusive, replicates_inchikey_list
+
+
+def make_splits_by_family(inchikeys, mainlib_mol_dict, family_names):
+  """Separate molecules according to family.
+  
+  Args:
+    inchikeys: List of inchikeys
+    mainlib_moldict: dict of lists of rdkit.Mol keyed by inchikey
+    family_names: Names of families to filter on.
+  Returns:
+    dict of list of inchikeys based on families, keyed by family names.
+  """
+  assert all(f_name in feature_utils.FILTER_DICT.keys() for f_name in family_names)
+  inchikey_by_family_dict = dict([(key, []) for key in family_names])
+  no_family_list = []
+
+  for inchikey in inchikeys:
+    mol = mainlib_mol_dict[inchikey][0]
+    for family_key in family_names:
+      # TODO(weijennifer): Fix this to account for largest family first. 
+      if feature_utils.FILTER_DICT[family_key](mol):
+        inchikey_by_family_dict[family_key].append(inchikey)
+        break 
+    else:
+      no_family_list.append(inchikey)
+
+  inchikey_by_family_dict['no_family'] = no_family_list
+  return inchikey_by_family_dict
+
+
+def split_all_replicate_inchikey_list(
+  replicates_family_dict, val_test_split = (0.5, 0.5)):
+  """Make val/test split for each list of inchikeys in dict.
+  
+  Args:
+    replicates_family_dict: dict containing lists of inchikeys
+        keyed by family name.
+    train_val_test_split: The split between val and test
+  Returns:
+    New dict of lists of inchikeys. Each key in replicates_family_dict
+    is now split into two lists, one with validation, and one with test.
+  """
+  replicates_component_dict = {}
+  train_val_test_split = [0.0] + list(val_test_split)
+  
+  train_val_test_split = TrainValTestFractions(
+    *train_val_test_split)
+
+  for key in replicates_family_dict:
+    _, val_inchikeys, test_inchikeys = (get_random_inchikeys(
+       replicates_family_dict[key], train_val_test_split))
+    replicates_component_dict[key + '_VALIDATION'] = val_inchikeys
+    replicates_component_dict[key + '_TEST'] = test_inchikeys 
+  
+  return replicates_component_dict

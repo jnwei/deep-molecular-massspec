@@ -31,7 +31,14 @@ from rdkit import Chem
 from rdkit import DataStructs
 from rdkit.Chem import AllChem
 
-FILTER_DICT = {
+
+FENTANYL_INCHIKEY_FILENAME = '/mnt/storage/NIST_zipped/NIST17/fentanyl_inchikeys.txt'
+
+with open(FENTANYL_INCHIKEY_FILENAME) as f:
+  FENTANYL_INCHIKEY_LIST = f.readlines() 
+  FENTANYL_INCHIKEY_LIST = [key.strip() for key in FENTANYL_INCHIKEY_LIST] 
+
+SUBSTRUCTURE_DICT = {
     'steroid':
         Chem.MolFromSmarts(
             '[#6]1~[#6]2~[#6](~[#6]~[#6]~[#6]~1)'
@@ -274,9 +281,22 @@ def check_mol_has_substructure(mol, substructure_mol):
 
 def make_filter_by_substructure(family_name):
   """Returns a filter function according to the family_name."""
-  if family_name not in FILTER_DICT.keys():
+  if family_name not in SUBSTRUCTURE_DICT.keys():
     raise ValueError('%s is not supported for family splitting' % family_name)
-  return lambda mol: check_mol_has_substructure(mol, FILTER_DICT[family_name])
+  return lambda mol: check_mol_has_substructure(mol, SUBSTRUCTURE_DICT[family_name])
+
+
+def make_filter_by_inchikey_list(inchikey_list):
+  return lambda mol: (check_mol_has_non_empty_sdf_tags(mol) and 
+    mol.GetPropsAsDict()[ms_constants.SDF_TAG_INCHIKEY] in inchikey_list)
+
+
+
+FILTER_DICT = {
+    'steroid' : make_filter_by_substructure('steroid'),
+    'diazo' : make_filter_by_substructure('diazo'),
+    'fentanyl' : make_filter_by_inchikey_list(FENTANYL_INCHIKEY_LIST),
+}
 
 
 def tokenize_smiles(smiles_string_arr):
