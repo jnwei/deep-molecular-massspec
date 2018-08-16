@@ -379,7 +379,6 @@ def write_json_for_experiment(experiment_setup, output_dir):
   Raises:
     ValueError: if the experiment component is not specified to be taken from
         either the main NIST library or the replicates library.
-
   """
   experiment_json_dict = {}
   for dataset_kwarg in experiment_setup.experiment_setup_dataset_dict:

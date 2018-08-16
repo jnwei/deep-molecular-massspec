@@ -1,4 +1,14 @@
 """Split the NIST dataset according to families.
+
+This module is used to split the NIST dataset by family type,
+then create train/validation splits for each family type.
+
+The components are then saved as individual TFRecord files using
+functions in train_test_write_utils. The *.info files and *.inchikey.txt
+files are also written, see train_test_write_utils.write_all_dataset files
+for details.
+
+The supported family types are recorded in feature_utils.FILTER_DICT
 """
 
 from __future__ import absolute_import
@@ -95,28 +105,20 @@ def main(_):
   print(replicates_component_dict)
 
   # Write datasets to disc
-  train_test_write_utils.write_datasets_from_mainlib(
+  train_test_write_utils.write_datasets_from_lib(
     mainlib_family_dict, mainlib_mol_dict,
     FLAGS.output_master_dir, FLAGS.max_atoms,
-    FLAGS.max_mass_spec_peak_loc)
+    FLAGS.max_mass_spec_peak_loc, lib_name='mainlib')
 
-  train_test_write_utils.write_datasets_from_mainlib(
+  train_test_write_utils.write_datasets_from_lib(
     replicates_component_dict, mainlib_mol_dict,
     FLAGS.output_master_dir, FLAGS.max_atoms,
-    FLAGS.max_mass_spec_peak_loc)
+    FLAGS.max_mass_spec_peak_loc, lib_name='mainlib')
 
-  train_test_write_utils.write_datasets_from_replib(
+  train_test_write_utils.write_datasets_from_lib(
     replicates_component_dict, replib_mol_dict,
     FLAGS.output_master_dir, FLAGS.max_atoms,
-    FLAGS.max_mass_spec_peak_loc)
-
-
-  # Combine lists of inchikeys
-  # Check if there are any overlaps in list.
-
-  # Write molecules to TFRecord, along with info file/record files.
-
-  # Write exp. json files (maybe do this in a separate script?)
+    FLAGS.max_mass_spec_peak_loc, lib_name='replicates')
 
 
 if __name__ == '__main__':

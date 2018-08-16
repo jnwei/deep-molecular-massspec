@@ -300,28 +300,10 @@ def main(_):
 
   config = tf.contrib.learn.RunConfig(model_dir=FLAGS.model_dir)
 
-  # (estimator, train_spec, eval_spec) = make_estimator_and_inputs(
-  #     config, hparams, prediction_helper, FLAGS.dataset_config_file,
-  #     FLAGS.train_steps, FLAGS.model_dir, FLAGS.warm_start_dir)
-  model_fn = _make_model_fn(prediction_helper, FLAGS.dataset_config_file,
-                            FLAGS.model_dir)
-  train_input_fn = _make_input_fn(FLAGS.dataset_config_file, hparams,
-                                  tf.estimator.ModeKeys.TRAIN,
-                                  prediction_helper.features_to_load(hparams))
-  eval_input_fn = _make_input_fn(FLAGS.dataset_config_file, hparams,
-                                 tf.estimator.ModeKeys.EVAL,
-                                 prediction_helper.features_to_load(hparams))
-  estimator = tf.estimator.Estimator(
-      model_fn=model_fn,
-      params=hparams,
-      config=config,
-      warm_start_from=FLAGS.warm_start_dir)
-
-  train_steps = 0
-  while train_steps < FLAGS.train_steps:
-    estimator.train(train_input_fn, steps=FLAGS.train_steps_per_iteration)
-    train_steps += FLAGS.train_steps_per_iteration
-    estimator.evaluate(eval_input_fn)
+  (estimator, train_spec, eval_spec) = make_estimator_and_inputs(
+      config, hparams, prediction_helper, FLAGS.dataset_config_file,
+      FLAGS.train_steps, FLAGS.model_dir, FLAGS.warm_start_dir)
+  tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 
 if __name__ == '__main__':
   tf.app.run(main)

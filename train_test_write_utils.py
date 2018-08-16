@@ -1,3 +1,9 @@
+"""Contains functions to help write dataset files for train test splits.
+
+Contains helper functions to help write TFRecords, info files, and inchikey
+files for a list of inchikeys, and a dict of a list of mols keyed by inchikey.
+"""
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -14,8 +20,6 @@ import tensorflow as tf
 INCHIKEY_FILENAME_END = '.inchikey.txt'
 TFRECORD_FILENAME_END = '.tfrecord'
 NP_LIBRARY_ARRAY_END = '.spectra_library.npy'
-MAINLIB_DATASET_MODIFIER = 'MAINLIB_'
-REPLIB_DATASET_MODIFIER = 'REPLIB_'
 FROM_MAINLIB_FILENAME_MODIFIER = '_from_mainlib'
 FROM_REPLICATES_FILENAME_MODIFIER = '_from_replicates'
 
@@ -76,33 +80,22 @@ def write_all_dataset_files(inchikey_dict,
       output_dir, record_name))
 
 
-def write_datasets_from_mainlib(component_inchikey_dict, mainlib_inchikey_dict,
-                                output_dir, max_atoms, max_mass_spec_peak_loc):
-  """Write all train/val/test set TFRecords from NIST_mainlibrary."""
+def write_datasets_from_lib(component_inchikey_dict, lib_inchikey_dict,
+                            output_dir, max_atoms, max_mass_spec_peak_loc,
+                            lib_name='mainlib'):
+  """Write all train/val/test set TFRecords and info from NIST mainlibrary."""
+  if lib_name == 'mainlib':
+    filename_modifier = FROM_MAINLIB_FILENAME_MODIFIER
+  elif lib_name == 'replicates':
+    filename_modifier = FROM_REPLICATES_FILENAME_MODIFIER
+
   for component_kwarg in component_inchikey_dict.keys():
-    component_mainlib_filename = (
-        component_kwarg + FROM_MAINLIB_FILENAME_MODIFIER)
+    component_lib_filename = (
+        component_kwarg + filename_modifier)
     write_all_dataset_files(
-        mainlib_inchikey_dict,
+        lib_inchikey_dict,
         component_inchikey_dict[component_kwarg],
-        component_mainlib_filename,
+        component_lib_filename,
         output_dir,
         max_atoms,
         max_mass_spec_peak_loc)
-
-
-def write_datasets_from_replib(component_inchikey_dict,
-                               replicates_inchikey_dict, output_dir,
-                               max_atoms, max_mass_spec_peak_loc):
-  """Write replicates val/test set TFRecords from replicates sdf file."""
-  for component_kwarg in component_inchikey_dict.keys():
-  	component_replicates_filename = (
-  		component_kwarg + FROM_REPLICATES_FILENAME_MODIFIER)
-  	write_all_dataset_files(
-  		replicates_inchikey_dict,
-        component_inchikey_dict[component_kwarg],
-        component_replicates_filename, output_dir,
-        max_atoms, max_mass_spec_peak_loc)
-
-
-
