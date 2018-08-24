@@ -552,9 +552,9 @@ def get_dataset_from_record(fnames,
         problems when training.
     ValueError: if <fname>.info does not exist for any files in fnames.
   """
-  if mode == tf.estimator.ModeKeys.TRAIN and len(fnames) > 1:
-    raise ValueError('Loading multiple files are not supported by this function'
-                     ' for training mode.')
+  # if mode == tf.estimator.ModeKeys.TRAIN and len(fnames) > 1:
+  #   raise ValueError('Loading multiple files are not supported by this function'
+  #                    ' for training mode.')
   if not fnames:
     raise ValueError('Input list of filenames is empty.')
 
